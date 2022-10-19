@@ -1,0 +1,353 @@
+﻿@page "/"
+@inject IBasketOperable basketService
+@inject IDbOperable dbService
+@inject IJSRuntime runtime
+@inject SendMailContentService sendMail
+@inject JsonSerializerOptionsService jsonOptions
+
+<PageTitle>OrderShop</PageTitle>
+
+<!--
+
+Panel z opisami.
+
+-->
+
+<div class="modal fade" id="descriptionModal" tabindex="-1" aria-labelledby="descLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="lightLabel"><b>@productModal.Name</b></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                @productModal.Description
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button-style button-cancel" style="width: 100px; height: 30px;" data-bs-dismiss="modal">Zamknij</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--
+
+Tytuł strony.
+
+-->
+
+<div class="text-center" style="margin-top: 3em;">
+    <h1 class="display-1" style="font-size: 120px; font-weight: 400;"><b>Ordershop</b></h1>
+    <h2 class="display-1" style="font-size: 60px; font-weight: 200; margin-top: 5px;"><b>Zamawiarka</b></h2>
+</div>
+
+<div class="div-line"></div>
+
+<!--
+
+Slider.
+
+-->
+
+
+<div class="small-divider"></div>
+
+<SliderComponent />
+
+<!--
+
+Div z produktami.
+
+-->
+
+<div class="small-divider"></div>
+
+<div class="small-divider"></div>
+
+<div id="products" class="promotion-desktop promotion-mobile">
+    @foreach (Product product in Products)
+    {
+        <div class="card col promotion-card-desktop promotion-card-mobile">
+            <img src="@product.ImageUrl" class="card-img-top">
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <h5 class="card-title text-center" style="font-size: 30px;"><b>@product.Name</b></h5>
+                    <h6 class="card-text text-center" style="margin-top: 1em;">@product.ShortDescription</h6>
+                    <button type="button" class="button-style" style="height: 50px; margin-top: 1em; width: 40%; background-color: lightgreen" data-bs-toggle="modal" data-bs-target="#descriptionModal" @onclick='() => SelectModalItem(product)'>
+                        Czytaj opis
+                    </button>
+                </div>
+                <div class="input-group justify-content-center mb-3" style="width: 40%; margin-left: auto; margin-right: auto; margin-top: 1em;">
+                    <div class="input-group-prepend">
+                        <button class="button-style button-qty" style="font-size: 30px;" @onclick='() => LowerTempQty(product)'><b>-</b></button>
+                    </div>
+                    <input class="form-control text-center" style="background-color: white; color: black;" type="number" min="1" @bind="product.TempQty" />
+                    <div class="input-group-append">
+                        <button class="button-style button-qty" style="font-size: 30px;" @onclick='() => RaiseTempQty(product)'><b>+</b></button>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <h4><b>Cena: @product.Price zł</b></h4>
+                    <button class="button-style" style="height: 50px; width: 50%; background-color: saddlebrown; color: white;" @onclick='() => AddToBasket(product)'>Dodaj do koszyka</button>
+                    <h5 style="margin-top: 15px;">W koszyku @product.Qty sztuk</h5>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!--
+
+Przycisk zamów - przejdzie do podsumowania zamówienia.
+
+-->
+
+<div class="small-divider"></div>
+
+<div class="container text-center">
+    <button class="place-order-btn button-style button-ok" style="font-size: 40px; height: 100px; background-color: green; color: white;" onclick="location.href='\summary'">ZAMÓW!</button>
+</div>
+
+
+<!--
+
+Div z ocenami.
+
+-->
+
+<div class="small-divider"></div>
+
+<div class="small-divider"></div>
+
+<div class="text-center" style="background-color: #ddfacf">
+    <h6 class="display-3" style="padding-top: 20px;"><b>Co o nas mówią klienci</b></h6>
+    <div class="row" style="margin-top: 4%; padding-bottom: 20px;">
+        <div class="card col opinion-style">
+            <div class="card-body">
+                <h4 class="card-title" style="font-size: 20px;">Dobra jakość, sklep godny zaufania</h4>
+                <p class="card-text">Darek (Lubuskie)</p>
+                <div class="row justify-content-center">
+                    <span class="material-symbols-outlined col-sm-1 star-style star-style-begin">star</span>
+                    <span class="material-symbols-outlined col-sm-1 star-style star-style-inner">star</span>
+                    <span class="material-symbols-outlined col-sm-1 star-style star-style-inner">star</span>
+                    <span class="material-symbols-outlined col-sm-1 star-style star-style-inner">star</span>
+                    <span class="material-symbols-outlined col-sm-1 star-style star-style-end">star</span>
+                </div>
+            </div>
+        </div>
+        <div class="card col opinion-style">
+            <div class="card-body">
+                <h4 class="card-title text-center" style="font-size: 20px;">Zakupy w tym sklepie to czysta przyjemność, pełen profesjonalizm!</h4>
+                <p class="card-text">Beata (Wielkopolskie)</p>
+                <div class="row justify-content-center">
+                    <span class="material-symbols-outlined col-sm-1 star-style star-style-begin">star</span>
+                    <span class="material-symbols-outlined col-sm-1 star-style star-style-inner">star</span>
+                    <span class="material-symbols-outlined col-sm-1 star-style star-style-inner">star</span>
+                    <span class="material-symbols-outlined col-sm-1 star-style star-style-inner">star</span>
+                    <span class="material-symbols-outlined col-sm-1 star-style star-style-end">star</span>
+                </div>
+            </div>
+        </div>
+        <div class="card col opinion-style">
+            <div class="card-body">
+                <h5 class="card-title text-center" style="font-size: 20px;">Szybka dostawa i doskonały towar</h5>
+                <p class="card-text">Zdzisław (Małopolskie)</p>
+                <div class="row justify-content-center">
+                    <span class="material-symbols-outlined col-sm-1 star-style star-style-begin">star</span>
+                    <span class="material-symbols-outlined col-sm-1 star-style star-style-inner">star</span>
+                    <span class="material-symbols-outlined col-sm-1 star-style star-style-inner">star</span>
+                    <span class="material-symbols-outlined col-sm-1 star-style star-style-inner">star</span>
+                    <span class="material-symbols-outlined col-sm-1 star-style star-style-end">star</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="small-divider"></div>
+
+<div class="div-line"></div>
+
+<div class="small-divider"></div>
+
+<!--
+
+Form z kontaktem.
+
+-->
+
+<div style="background-color: #ddfacf">
+    <div class="text-center mb-5" style="margin-top: 2em; padding-top: 20px;">
+        <h3 class="display-3"><b>Masz pytanie?</b></h3>
+        <h4 class="display-4">Zadaj je nam, a my odpiszemy jak najszybciej!</h4>
+    </div>
+    <form method="post" asp-page-handler="sendQuestion" class="justify-content-center" style="width: 80%; margin-left: auto; margin-right: auto; margin-top: 2em;  padding-bottom: 20px;">
+        <input class="mb-3" type="email" placeholder="Wpisz adres email" style="width: 100%" @bind="Mail" />
+        <textarea class="mb-3" type="text" placeholder="Wpisz treść pytania..." style="width: 100%; min-height: 200px;" @bind="MailContent"></textarea>
+        <div style="width: 80%; margin-left: auto; margin-right: auto;">
+            <button type="button" class="button-style button-ok" style="width: 100%; height: 60px; font-size: 25px;" @onclick="SendEmail">Wyślij</button>
+        </div>
+    </form>
+</div>
+
+@code {
+
+    ////////////////////////////////////////////////////////////////////////
+    ///Właściwości.
+
+    public string Mail { get; set; } = string.Empty;
+    public string MailContent { get; set; } = string.Empty;
+
+    private List<Product>? Products { get; set; } = new();
+    private List<Product>? BasketItems { get; set; } = new();
+
+    ////////////////////////////////////////////////////////////////////////
+    ///Zmienne.
+
+    private Product productModal = new();
+
+    ////////////////////////////////////////////////////////////////////////
+    ///
+
+    /// <summary>
+    /// Inicjalizacja strony.
+    /// </summary>
+    protected override async void OnInitialized()
+    {
+        base.OnInitialized();
+        Products = await dbService.ReadPromoted();
+        StateHasChanged();
+        await ReadBasketContent();
+    }
+
+    ////////////////////////////////////////////////////////////////////////
+    ///Operacje na produktach promowanych.
+
+    ///<summary>
+    ///Wybranie produktu do wyświetlenia jego opisu w popupie.
+    ///</summary>
+    ///<param name="product">Wybrany produkt.</param>
+    public void SelectModalItem(Product product)
+    {
+        productModal = product;
+    }
+
+    ///<summary>
+    ///Zmniejszenie ilości produktu do dodania do koszyka.
+    ///</summary>
+    ///<param name="product">Wybrany produkt.</param>
+    public void LowerTempQty(Product product)
+    {
+        product.TempQty = product.TempQty > 1 ? product.TempQty - 1 : product.TempQty;
+    }
+
+    ///<summary>
+    ///Zwiększenie ilości produktu do dodania do koszyka.
+    ///</summary>
+    ///<param name="product">Wybrany produkt.</param>
+    public void RaiseTempQty(Product product)
+    {
+        product.TempQty++;
+    }
+
+    ////////////////////////////////////////////////////////////////////////
+    ///Operacje na koszyku.
+
+    ///<summary>
+    ///Dodanie produktu do koszyka.
+    ///</summary>
+    ///<param name="product">Wybrany produkt</param>
+    public async Task AddToBasket(Product product)
+    {
+        try
+        {
+            int index = 0;
+            product.Qty += product.TempQty;
+            product.TempQty = 1;
+            Product productToUpdate = null;
+            if (BasketItems.Count > 0)
+            {
+                productToUpdate = BasketItems.Where(p => p.Id.Equals(product.Id)).FirstOrDefault();
+            }
+            if (productToUpdate is null)
+            {
+                BasketItems.Add(product);
+            }
+            else
+            {
+                index = BasketItems.IndexOf(productToUpdate);
+                BasketItems[index] = product;
+            }
+            await basketService.SaveBasket(BasketItems);
+            StateHasChanged();
+        }
+        catch (Exception e)
+        {
+            System.Console.WriteLine(e.StackTrace);
+        }
+    }
+
+    /// <summary>
+    /// Odczytanie zawartości koszyka.
+    /// </summary>
+    public async Task ReadBasketContent()
+    {
+        try
+        {
+            Product temp = null;
+            BasketItems = await basketService.ReadBasket();
+            if (BasketItems == null)
+            {
+                BasketItems = await basketService.CreateBasket();
+            }
+            else
+            {
+                foreach (Product product in Products)
+                {
+                    temp = BasketItems.Where(p => p.Id.Equals(product.Id)).FirstOrDefault();
+                    if (temp is not null)
+                    {
+                        product.Qty = temp.Qty;
+                    }
+                }
+            }
+            StateHasChanged();
+        }
+        catch (Exception e)
+        {
+            System.Console.WriteLine(e.StackTrace);
+        }
+    }
+
+    ////////////////////////////////////////////////////////////////////////
+    ///Wysłanie zapytania.
+
+    ///<summary>
+    ///Wysłanie zapytania od klienta.
+    ///</summary>
+    public async Task<bool> SendEmail()
+    {
+
+        if (string.IsNullOrEmpty(Mail) || !Mail.Contains('@'))
+        {
+            await runtime.InvokeVoidAsync("alert", "Nie wpisano adresu e-mail.");
+            return false;
+        }
+        if (string.IsNullOrEmpty(MailContent))
+        {
+            await runtime.InvokeVoidAsync("alert", "Nie wpisano treści zapytania.");
+            return false;
+        }
+        Question question = new()
+            {
+                Mail = Mail,
+                Content = MailContent
+            };
+        sendMail.SendMailContent(question);
+        Mail = string.Empty;
+        MailContent = string.Empty;
+        StateHasChanged();
+        await runtime.InvokeVoidAsync("alert", "Dziękujemy za wysłanie zapytania. Odpowiemy na nie jak najszybciej!");
+        return true;
+    }
+}

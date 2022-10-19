@@ -1,0 +1,305 @@
+﻿@page "/summary"
+@inject IDbOperable db
+@inject IBasketOperable basket
+@inject IJSRuntime javascript
+@inject NavigationManager navManager
+@inject OrderService orderService
+
+<PageTitle>Podsumowanie</PageTitle>
+
+
+<div class="row">
+    <div class="col-8 normal-pos">
+        <!--
+
+        Panel koszyka.
+        Wyświetlenie jego zawartości.
+
+        -->
+        <h2>Twój koszyk</h2>
+        <div class="div-line widen-lines" style="width: 20%"></div>
+        <div class="small-divider"></div>
+        <div class="small-divider"></div>
+        <section class="div-basket" style="padding-right: 5%">
+            @if (Basket.Count == 0)
+            {
+                <h2>Twój koszyk jest pusty!</h2>
+            }
+            else
+            {
+                @foreach (Product product in Basket)
+                {
+                    <div class="row mb-3">
+                        <div class="col-sm-3" style="border-style: groove; border-color: lightgreen; border-width: 1px; contain: content">
+                            <img src="@product?.ImageUrl" width="100" height="100" />
+                        </div>
+                        <div class="col-sm-9 grid-basket-low grid-basket-high" style="margin-top: auto; margin-bottom: auto;">
+                            <div class="grid-name-low" style="margin-left: auto; margin-right: auto; max-width: 50%;">
+                                <h2><b>@product?.Name</b></h2>
+                            </div>
+                            <div class="grid-qty-high grid-qty-low input-group justify-content-center grid-qty-wider" style="">
+                                <div class="input-group-prepend">
+                                    <button class="button-style button-qty" style="font-size: 30px;" @onclick='() => LowerItemQty(product)'><b>-</b></button>
+                                </div>
+                                <input class="form-control text-center" style="background-color: white; color: black;" type="number" min="1" @bind="product.Qty" />
+                                <div class="input-group-append">
+                                    <button class="button-style button-qty" style="font-size: 30px;" @onclick='() => RaiseItemQty(product)'><b>+</b></button>
+                                </div>
+                            </div>
+                            <div class="grid-sum-low" style="margin-left: auto; margin-right: auto;">
+                                <h2><b>@product?.Sum zł</b></h2>
+                            </div>
+                            <div class="material-symbols-outlined grid-delete-low grid-delete-high">
+                                <button @onclick="() => RemoveFromBasket(product)" class="button-cancel" style="width: 100%; height: 100%;"><span>delete</span></button>
+                            </div>
+                        </div>
+                        <div class="div-thin-line mt-3"></div>
+                    </div>
+                }
+            }
+        </section>
+        <!--
+
+        Div z danymi osobowymi.
+
+        -->
+        <div class="medium-divider"></div>
+        <div>
+            <h2>Dane do wysyłki</h2>
+            <div class="div-line widen-lines" style="width: 26%"></div>
+            <div class="small-divider"></div>
+            <div class="small-divider"></div>
+            <div class="small-divider"></div>
+            <form class="form-login">
+                <input id="nameField" class="login-item" type="text" placeholder="Imię" @bind-value="@OrderCustomer.Name" required />
+                <input id="surnameField" class="login-item" type="text" placeholder="Nazwisko" @bind-value="@OrderCustomer.Surname" required />
+                <input id="mailField" class="login-item" type="text" inputmode="email" @bind-value="@OrderCustomer.Mail" placeholder="Adres e-mail" />
+                <input id="phoneField" class="login-item" type="text" inputmode="email" placeholder="Telefon" @bind-value="@OrderCustomer.Phone" required />
+                <input id="streetFieldOne" class="login-item" type="text" inputmode="email" placeholder="Ulica i nr domu" @bind-value="@OrderCustomer.Address" required />
+                <input id="postCodeField" class="login-item" type="text" inputmode="email" placeholder="Kod pocztowy" @bind-value="@OrderCustomer.PostCode" required />
+                <input id="cityField" class="login-item" type="text" inputmode="email" placeholder="Miasto" @bind-value="@OrderCustomer.City" required />
+            </form>
+        </div>
+        <div class="medium-divider"></div>
+        <!--
+
+        Pole z dodaniem noty do zamówienia.
+
+        -->
+        <div>
+            <h3 class="mb-3">Chcesz dodać notę do zamówienia?</h3>
+            <div class="div-line widen-lines" style="width: 50%"></div>
+            <div class="small-divider"></div>
+            <div class="small-divider"></div>
+            <div class="small-divider"></div>
+            <textarea style="width: 80%; min-height: 100px; resize: vertical" placeholder="Dodaj notę do zamówienia..." @bind="OrderNote"></textarea>
+        </div>
+    </div>
+    <div class="small-divider"></div>
+    <!--
+
+    Panel z podsumowaniem zamówienia.
+
+    -->
+    <div class="col-4 fixed-pos normal-pos">
+        <div class="sum">
+            <h4>Produkty: @ProductSum zł</h4>
+            <h4>Wysyłka (pobranie): @PostCost zł</h4>
+            <h1 style="font-size: 60px;"><b>Suma: @Sum zł</b></h1>
+        </div>
+        <div class="div-line"></div>
+        <div class="small-divider"></div>
+        <div class="flex-row" style="text-align: right">
+            <button @onclick="SaveOrder" class="button-style button-ok" style="width: 100%; height: 80px;">Zamów</button>
+        </div>
+    </div>
+</div>
+
+
+
+@code {
+
+    ////////////////////////////////////////////////////////////////////////
+    ///Właściwości.
+
+    List<Product>? Basket { get; set; } = new();
+
+    Customer OrderCustomer { get; set; } = new();
+
+    Decimal ProductSum { get; set; } = 0.0M;
+
+    Decimal Sum { get; set; } = 0.0M;
+
+    Decimal PostCost { get; set; } = 30.0M;
+
+    string OrderNote { get; set; } = string.Empty;
+
+    ////////////////////////////////////////////////////////////////////////
+    ///
+
+    /// <summary>
+    /// Inicjalizacja strony.
+    /// </summary>
+
+    protected async override Task OnInitializedAsync()
+    {
+        await ReadBasket();
+    }
+
+    ////////////////////////////////////////////////////////////////////////
+    ///Operacje na produktach w koszyku.
+
+    /// <summary>
+    /// Zwiększenie ilości kupowanych przedmiotów.
+    /// </summary>
+    /// <param name="product">Produkt, którego kupowana ilość ma się zmienić.</param>
+    public async void RaiseItemQty(Product product)
+    {
+        ProductSum -= product.Sum;
+        Sum -= product.Sum;
+        product.Qty += 1;
+        product.Sum = (decimal)product.Qty * product.Price;
+        int index = Basket.IndexOf(Basket.Where(i => i.Id.Equals(product.Id)).First());
+        Basket[index] = product;
+        ProductSum += product.Sum;
+        Sum += product.Sum;
+        await basket.SaveBasket(Basket);
+    }
+
+    /// <summary>
+    ///  Zmniejszenie ilości kupowanych przedmiotów.
+    /// </summary>
+    /// <param name="product">Produkt, którego kupowana ilość ma się zmienić.</param>
+    public async void LowerItemQty(Product product)
+    {
+        if (product.Qty > 1)
+        {
+            ProductSum -= product.Sum;
+            Sum -= product.Sum;
+            product.Qty -= 1;
+            product.Sum = (decimal)product.Qty * product.Price;
+            int index = Basket.IndexOf(Basket.Where(i => i.Id.Equals(product.Id)).First());
+            Basket[index] = product;
+            ProductSum += product.Sum;
+            Sum += product.Sum;
+            await basket.SaveBasket(Basket);
+        }
+    }
+
+    /// <summary>
+    /// Usunięcie produktu z koszyka.
+    /// </summary>
+    /// <param name="product">Produkt do usunięcia z koszyka.</param>
+    public async void RemoveFromBasket(Product product)
+    {
+        Basket?.Remove(product);
+        await basket.SaveBasket(Basket);
+        StateHasChanged();
+    }
+
+    ////////////////////////////////////////////////////////////////////////
+    ///Operacje na koszyku.
+
+    ///<summary>
+    ///Odczytanie zawartości koszyka i zliczenie sumy w podsumowaniu.
+    ///</summary>
+    public async Task ReadBasket()
+    {
+        try
+        {
+            ProductSum = 0.0M;
+            Sum = 0.0M;
+            Basket = await basket.ReadBasket();
+            foreach (Product product in Basket)
+            {
+                ProductSum += product.Sum;
+            }
+            Sum = ProductSum + PostCost;
+            StateHasChanged();
+        }
+        catch (Exception e)
+        {
+            Debug.WriteLine(e.StackTrace);
+            throw;
+        }
+    }
+
+    ////////////////////////////////////////////////////////////////////////
+    ///Operacje na zamówieniu.
+
+    ///<summary>
+    //Zapisanie zamówienia.
+    // </summary>
+    public void SaveOrder()
+    {
+        if (!OrderValidation())
+        {
+            return;
+        }
+         
+        IEnumerable<Item> items = from p in Basket
+                                  select new Item()
+                                      {
+                                          Id = p.Id,
+                                          Qty = p.Qty
+                                      };
+
+        orderService.Order = new()
+            {
+                Customer = OrderCustomer,
+                Items = items,
+                Note = OrderNote
+            };
+
+        navManager.NavigateTo("/confirmation");
+    }
+
+    ///<summary>
+    //Walidacja danych.
+    // </summary>
+    public bool OrderValidation()
+    {
+        if (Basket == null || Basket.Count == 0)
+        {
+            javascript.InvokeAsync<string>("alert", "Brak produktów w koszyku");
+            return false;
+        }
+        if (string.IsNullOrEmpty(OrderCustomer.Name))
+        {
+            javascript.InvokeAsync<string>("alert", "Brak wypełnionego pola imienia");
+            return false;
+        }
+        if (string.IsNullOrEmpty(OrderCustomer.Surname))
+        {
+            javascript.InvokeAsync<string>("alert", "Brak wypełnionego pola nazwiska");
+            return false;
+        }
+        if (string.IsNullOrEmpty(OrderCustomer.Address))
+        {
+            javascript.InvokeAsync<string>("alert", "Brak wypełnionego pola adresu (ulica i nr domu)");
+            return false;
+        }
+        if (string.IsNullOrEmpty(OrderCustomer.PostCode))
+        {
+            javascript.InvokeAsync<string>("alert", "Brak wypełnionego pola kodu pocztowego");
+            return false;
+        }
+        if (string.IsNullOrEmpty(OrderCustomer.City))
+        {
+            javascript.InvokeAsync<string>("alert", "Brak wypełnionej pola miejscowości");
+            return false;
+        }
+        if (string.IsNullOrEmpty(OrderCustomer.Phone))
+        {
+            javascript.InvokeAsync<string>("alert", "Brak produktów pola telefonu");
+            return false;
+        }
+        if (string.IsNullOrEmpty(OrderCustomer.Mail))
+        {
+            javascript.InvokeAsync<string>("alert", "Brak produktów pola adresu e-mail");
+            return false;
+        }
+        return true;
+    }
+
+}

@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+https://go.microsoft.com/fwlink/?LinkID=208121.
+-->
+<Project>
+  <PropertyGroup>
+    <_PublishTargetUrl>C:\Users\dariu\source\repos\OrderShopWeb\bin\Release\net6.0\browser-wasm\publish\</_PublishTargetUrl>
+    <History>True|2022-09-16T17:48:13.4329596Z;True|2022-09-15T23:02:03.2812531+02:00;True|2022-09-15T22:44:43.5252904+02:00;False|2022-09-15T22:41:39.0277116+02:00;True|2022-09-14T18:02:55.1309111+02:00;True|2022-09-14T17:58:36.1859994+02:00;True|2022-09-14T17:21:18.7116889+02:00;True|2022-09-13T20:11:32.2923733+02:00;True|2022-09-13T20:06:05.7880348+02:00;True|2022-09-13T18:31:11.6277510+02:00;</History>
+    <LastFailureDetails />
+  </PropertyGroup>
+</Project>

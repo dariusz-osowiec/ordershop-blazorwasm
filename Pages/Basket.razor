@@ -1,0 +1,199 @@
+﻿@page "/basket"
+@inject IDbOperable db
+@inject IBasketOperable basketService
+@inject NavigationManager navManager
+
+<PageTitle>Twój koszyk</PageTitle>
+
+<h1>Twój koszyk</h1>
+
+<div class="row">
+    <!--
+
+    Panel koszyka.
+    Wyświetlenie jego zawartości.
+
+    -->
+    <section class="col-8 mt-4 normal-pos" style="padding-right: 5%; contain: content;">
+        @if (BasketItems.Count == 0)
+        {
+            <h2>Twój koszyk jest pusty!</h2>
+        }
+        else
+        {
+            @foreach (Product product in BasketItems)
+            {
+                <div class="row mb-3">
+                    <div class="col-sm-3" style="border-style: groove; border-color: lightgreen; border-width: 1px; contain: content">
+                        <img src="@product?.ImageUrl" width="100" height="100" />
+                    </div>
+                    <div class="col-sm-9 grid-basket-low grid-basket-high" style="margin-top: auto; margin-bottom: auto;">
+                        <div class="grid-name-low" style="margin-left: auto; margin-right: auto; max-width: 50%;">
+                            <h2><b>@product?.Name</b></h2>
+                        </div>
+                        <div class="grid-qty-high grid-qty-low input-group justify-content-center grid-qty-wider" style="">
+                            <div class="input-group-prepend">
+                                <button class="button-style button-qty" style="font-size: 30px;" @onclick='() => LowerItemQty(product)'><b>-</b></button>
+                            </div>
+                            <input class="form-control text-center" style="background-color: white; color: black;" type="number" min="1" @bind="product.Qty" />
+                            <div class="input-group-append">
+                                <button class="button-style button-qty" style="font-size: 30px;" @onclick='() => RaiseItemQty(product)'><b>+</b></button>
+                            </div>
+                        </div>
+                        <div class="grid-sum-low" style="margin-left: auto; margin-right: auto;">
+                            <h2><b>@product?.Sum zł</b></h2>
+                        </div>
+                        <div class="material-symbols-outlined grid-delete-low grid-delete-high">
+                            <button @onclick="() => RemoveFromBasket(product)" class="button-cancel" style="width: 100%; height: 100%;"><span>delete</span></button>
+                        </div>                        
+                    </div>
+                    <div class="div-thin-line mt-3"></div>
+                </div>
+            }
+        }
+    </section>
+    <!--
+
+    Panel z podsumowaniem koszyka.
+
+    -->
+    <div class="divider"></div>
+    <div class="col-4 fixed-pos normal-pos">
+        <div class="sum">
+            <h1 style="font-size: 60px;"><b>Suma: @ProductSum zł</b></h1>
+            <h5>+ koszty dostawy</h5>
+        </div>
+        <div class="div-line"></div>
+        <div class="small-divider"></div>
+        <div class="flex-row arrange-buttons-low arrange-buttons-high">
+            <button class="button-style button-cancel button-cancel-pos-low button-cancel-pos-high" style="margin-right: 5px; height: 75px;" @onclick="ClearBasket">Wyczyść koszyk</button>
+            <div class="small-divider"></div>
+            <button class="button-style button-ok button-ok-pos-low button-ok-pos-high" style="margin-left: 5px; height: 75px;" @onclick="GoToSummaryPage">Przejdź do podsumowania</button>
+        </div>
+    </div>
+</div>
+
+
+@code {
+
+    ////////////////////////////////////////////////////////////////////////
+    ///Właściwości.
+
+    /// <summary>
+    /// Lista produktów w koszyku.
+    /// </summary>
+    List<Product>? BasketItems { get; set; } = new();
+
+    /// <summary>
+    /// Suma produktów w podsumowaniu koszyka.
+    /// </summary>
+    Decimal ProductSum { get; set; } = 0.0M;
+
+    ////////////////////////////////////////////////////////////////////////
+    ///
+
+    /// <summary>
+    /// Inicjalizacja strony.
+    /// </summary>
+    protected async override Task OnInitializedAsync()
+    {
+        await ReadBasket();
+    }
+
+
+    ////////////////////////////////////////////////////////////////////////
+    ///Operacje na produktach w koszyku.
+
+    /// <summary>
+    /// Zwiększenie ilości kupowanych przedmiotów.
+    /// </summary>
+    /// <param name="product">Produkt, którego kupowana ilość ma się zmienić.</param>
+    public async void RaiseItemQty(Product product)
+    {
+        ProductSum -= product.Sum;
+        product.Qty += 1;
+        product.Sum = (decimal)product.Qty * product.Price;
+        int index = BasketItems.IndexOf(BasketItems.Where(i => i.Id.Equals(product.Id)).First());
+        BasketItems[index] = product;
+        ProductSum += product.Sum;
+        await basketService.SaveBasket(BasketItems);
+    }
+
+    /// <summary>
+    ///  Zmniejszenie ilości kupowanych przedmiotów.
+    /// </summary>
+    /// <param name="product">Produkt, którego kupowana ilość ma się zmienić.</param>
+    public async void LowerItemQty(Product product)
+    {
+        if (product.Qty > 1)
+        {
+            ProductSum -= product.Sum;
+            product.Qty -= 1;
+            product.Sum = (decimal)product.Qty * product.Price;
+            int index = BasketItems.IndexOf(BasketItems.Where(i => i.Id.Equals(product.Id)).First());
+            BasketItems[index] = product;
+            ProductSum += product.Sum;
+            await basketService.SaveBasket(BasketItems);
+        }
+    }
+
+    /// <summary>
+    /// Usunięcie produktu z koszyka.
+    /// </summary>
+    /// <param name="product">Produkt do usunięcia z koszyka.</param>
+    public async void RemoveFromBasket(Product product)
+    {
+        BasketItems?.Remove(product);
+        await basketService.SaveBasket(BasketItems);
+        StateHasChanged();
+    }
+
+
+    ////////////////////////////////////////////////////////////////////////
+    ///Operacje na stronie.
+
+    /// <summary>
+    /// Przejście na stronę podsumowania produktu.
+    /// </summary>
+    public async Task GoToSummaryPage()
+    {
+        await basketService.SaveBasket(BasketItems);
+        navManager.NavigateTo("/summary");
+    }
+
+
+    ////////////////////////////////////////////////////////////////////////
+    ///Operacje na koszyku.
+
+    /// <summary>
+    /// Wyczyszczenie koszyka.
+    /// </summary>
+    public async void ClearBasket()
+    {
+        BasketItems = await basketService.CreateBasket();
+        ProductSum = 0;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Odczytanie zawartości koszyka.
+    /// </summary>
+    public async Task ReadBasket()
+    {
+        try
+        {
+            ProductSum = 0.0M;
+            BasketItems = await basketService.ReadBasket();
+            foreach (Product product in BasketItems)
+            {
+                ProductSum += product.Sum;
+            }
+            StateHasChanged();
+        }
+        catch (Exception e)
+        {
+            Debug.WriteLine(e.StackTrace);
+            throw;
+        }
+    }
+}

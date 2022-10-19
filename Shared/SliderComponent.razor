@@ -1,0 +1,32 @@
+﻿<!--
+
+Element slidera. Niestety bootstrap nie działa w WASM w 100%, dlatego każdy slajd, 
+pewnie musi być odlikiwany ręcznie, stąd ta biblioteka.
+
+-->
+<BSCarousel>
+    @foreach (string url in urls)
+    {
+        <BSCarouselItem>
+            <div>
+                <img src="@url" style="height: 40em; width: 100em;"/>
+            </div>
+        </BSCarouselItem>
+    }
+</BSCarousel>
+
+
+@code {
+
+    ///<summary>
+    ///Lista obrazków do wyświetlenia w sliderze.
+    ///</summary>
+    List<string> urls = new()
+    {
+        "/sliderimg/first.jpg",
+        "/sliderimg/second.jpg",
+        "/sliderimg/third.jpg",
+        "/sliderimg/fourth.jpg"
+    };
+
+}
